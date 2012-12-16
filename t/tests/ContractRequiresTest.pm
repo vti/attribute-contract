@@ -170,6 +170,14 @@ sub handle_ref : Test {
     ok($code_ref->(undef, {}));
 }
 
+sub handle_regexp : Test {
+    my $self = shift;
+
+    my $code_ref = $self->_build_code_ref('REGEXP');
+
+    ok($code_ref->(undef, qr/1/));
+}
+
 sub _build_code_ref {
     my $self = shift;
     my ($arguments) = @_;

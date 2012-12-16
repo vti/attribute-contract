@@ -6,7 +6,7 @@ use warnings;
 require Carp;
 use Scalar::Util qw(blessed);
 
-$Carp::Internal{ (__PACKAGE__) }++;
+$Carp::Internal{(__PACKAGE__)}++;
 
 sub modify {
     my $class = shift;
@@ -38,17 +38,17 @@ sub modify {
         }
 
         Carp::confess(
-            "@{[scalar(@_)]} param(s) passed, at least $min_required param(s) required"
+"@{[scalar(@_)]} param(s) passed, at least $min_required param(s) required"
         ) if @_ < $min_required;
 
         if ($max_allowed != -1) {
             Carp::confess(
-                "@{[scalar(@_)]} param(s) passed, max $max_allowed param(s) allowed"
+"@{[scalar(@_)]} param(s) passed, max $max_allowed param(s) allowed"
             ) if @_ > $max_allowed;
         }
 
         my $error = 0;
-        my $pos = 0;
+        my $pos   = 0;
         foreach my $value (@_) {
             my $type = $types[$pos];
 
@@ -108,7 +108,6 @@ sub modify {
             }
         }
 
-
         return $code_ref->($self, @_);
     };
 }
@@ -118,7 +117,13 @@ sub _check_code_ref {
 
     $type =~ s/\?$//;
 
-    if ($type =~ m/^(.*?)REF$/) {
+    if ($type eq 'ANY') {
+        sub { 1 }
+    }
+    elsif ($type eq 'SCALAR') {
+        sub { !ref $_[0] }
+    }
+    elsif ($type =~ m/^(.*?)REF$/) {
         my $ref_type = $1;
         sub { $ref_type eq ref $_[0] }
     }
@@ -126,11 +131,8 @@ sub _check_code_ref {
         my $isa = $1;
         $isa ? sub { blessed $_[0] && $_[0]->isa($isa) } : sub { blessed $_[0] }
     }
-    elsif ($type eq 'SCALAR') {
-        sub { !ref $_[0] }
-    }
-    elsif ($type eq 'ANY') {
-        sub { 1 }
+    elsif ($type eq 'REGEXP') {
+        sub { ref $_[0] eq 'Regexp' }
     }
     else {
         die "Unknown type $type";

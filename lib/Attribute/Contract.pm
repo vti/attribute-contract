@@ -10,8 +10,6 @@ our $VERSION = '0.01';
 use Scalar::Util qw(refaddr);
 
 use Attribute::Contract::Modifier::Requires;
-#use Attribute::Contract::Modifier::Ensures;
-#use Attribute::Contract::Modifier::Throws;
 
 BEGIN {
     use Exporter ();

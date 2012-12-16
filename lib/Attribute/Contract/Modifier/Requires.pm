@@ -1,4 +1,4 @@
-package Attribute::Contract::Params;
+package Attribute::Contract::Modifier::Requires;
 
 use strict;
 use warnings;

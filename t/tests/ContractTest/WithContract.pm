@@ -14,7 +14,8 @@ sub new {
     return $self;
 }
 
-sub method :ContractParams(SCALAR) {
+sub method :ContractRequires(SCALAR) {
+    1;
 }
 
 1;

@@ -9,7 +9,9 @@ our $VERSION = '0.01';
 
 use Scalar::Util qw(refaddr);
 
-use Attribute::Contract::Params;
+use Attribute::Contract::Modifier::Requires;
+#use Attribute::Contract::Modifier::Ensures;
+#use Attribute::Contract::Modifier::Throws;
 
 BEGIN {
     use Exporter ();
@@ -62,7 +64,7 @@ sub MODIFY_CODE_ATTRIBUTES {
             }
         }
         else {
-            my $class = __PACKAGE__ . '::' . $check;
+            my $class = __PACKAGE__ . '::Modifier::' . $check;
 
             *{$sym} = $class->modify($package, $name, $code_ref, $arguments);
         }

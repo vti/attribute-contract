@@ -1,4 +1,4 @@
-package ContractParamsTest;
+package ContractRequiresTest;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use base 'TestBase';
 use Test::More;
 use Test::Fatal;
 
-use Attribute::Contract::Params;
+use Attribute::Contract::Modifier::Requires;
 
 sub throw_no_params_allowed : Test {
     my $self = shift;
@@ -151,7 +151,7 @@ sub handle_OBJECT : Test {
 
     my $code_ref = $self->_build_code_ref('OBJECT');
 
-    ok($code_ref->(undef, ContractParamsTest->new));
+    ok($code_ref->(undef, ContractRequiresTest->new));
 }
 
 sub handle_OBJECT_ISA : Test {
@@ -159,7 +159,7 @@ sub handle_OBJECT_ISA : Test {
 
     my $code_ref = $self->_build_code_ref('OBJECT(TestBase)');
 
-    ok($code_ref->(undef, ContractParamsTest->new));
+    ok($code_ref->(undef, ContractRequiresTest->new));
 }
 
 sub handle_ref : Test {
@@ -174,7 +174,7 @@ sub _build_code_ref {
     my $self = shift;
     my ($arguments) = @_;
 
-    return Attribute::Contract::Params->modify('package', 'name',
+    return Attribute::Contract::Modifier::Requires->modify('package', 'name',
         sub { 1 }, $arguments);
 }
 

@@ -44,7 +44,9 @@ information like:
 
 Why attributes? They feel and look natural and are applied during compile time.
 
-=head2 SCALAR TYPES
+=head2 TYPES
+
+=head3 Scalar types
 
 =over
 
@@ -82,7 +84,7 @@ A blessed reference with specified isa.
 
 =back
 
-=head2 GREEDY TYPES
+=head3 Greedy types
 
 Types that eat all the elements. Can be specified at the end of the elements
 list for manual unpacking. C<@> stands for arrays and C<%> stands for hashes.
@@ -144,19 +146,21 @@ or
 
     $object->method('foo', 'bar');
 
-=head2 INHERITANCE
+=head2 IMPLEMENTATION
+
+=head3 Inheritance
 
 By default all the contracts are inherited. Just don't forget to C<use>
 L<Attribute::Contract> in the derived class. But if no methods are override then
 even C<using> this module is not needed.
 
-=head2 CACHING
+=head3 Caching
 
 During the compile time for every contract a Perl subroutine is built and
 evaled. If the methods share the same contract they use the same checking code
 reference. This speeds up the checking and saves some memory.
 
-=head2 ERROR REPORTING
+=head3 Error reporting
 
 Errors are as specific as possible. On error you will get a meaningful message
 and a stack trace.

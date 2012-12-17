@@ -21,6 +21,36 @@ BEGIN {
 
 my %attrs;
 my %modifiers;
+my %symcache;
+my %todo;
+
+sub import {
+
+    my ($package) = caller;
+    $todo{$package}++;
+
+    __PACKAGE__->export_to_level(1, @_);
+}
+
+sub CHECK {
+
+    foreach my $package (keys %todo) {
+        foreach my $key (keys %modifiers) {
+            my ($class, $method) = split /::/, $key;
+            next unless $package->isa($class);
+
+            next unless my $code_ref = $package->can($method);
+
+            my $attrs = $modifiers{$key};
+
+            foreach my $attr (@$attrs) {
+                next unless $attr =~ m/^Contract/;
+
+                attributes::->import($package, $code_ref, $attr);
+            }
+        }
+    }
+}
 
 sub FETCH_CODE_ATTRIBUTES {
     my ($package, $subref) = @_;
@@ -46,34 +76,15 @@ sub MODIFY_CODE_ATTRIBUTES {
         my $check     = $1;
         my $arguments = $2;
 
-        if ($check eq 'Inherit') {
-            no strict 'refs';
-            my @isa = @{"$package\::ISA"};
-            foreach my $isa (reverse @isa) {
-                if (exists $modifiers{"$isa\::$name"}) {
-                    my @attr_list = @{$modifiers{"$isa\::$name"}};
+        my $class = __PACKAGE__ . '::Modifier::' . $check;
 
-                    if (@attr_list) {
-                        attributes::->import($package, $package->can($name), $_)
-                          for @attr_list;
-                        last;
-                    }
-                }
-            }
-        }
-        else {
-            my $class = __PACKAGE__ . '::Modifier::' . $check;
-
-            *{$sym} = $class->modify($package, $name, $code_ref, $arguments);
-        }
+        *{$sym} = $class->modify($package, $name, $code_ref, $arguments);
     }
 
     return ();
 }
 
 # From Attribute::Handlers
-my %symcache;
-
 sub findsym {
     my ($package, $ref) = @_;
 
@@ -89,6 +100,8 @@ sub findsym {
         return $symcache{$package, $ref} = \$sym
           if *{$sym}{$type} && *{$sym}{$type} == $ref;
     }
+
+    return;
 }
 
 1;

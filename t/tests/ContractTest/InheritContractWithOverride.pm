@@ -5,7 +5,9 @@ use warnings;
 
 use base 'WithContract';
 
-sub method :ContractInherit {
+use Attribute::Contract;
+
+sub method {
 }
 
 1;

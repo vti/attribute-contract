@@ -32,4 +32,12 @@ sub inherit_contract_with_override : Test {
     ok(exception { InheritContractWithOverride->new->method(\1) });
 }
 
+sub inherit_contract_with_override_in_eval : Test {
+    my $self = shift;
+
+    my $object = eval { InheritContractWithOverride->new };
+
+    like(exception { $object->method(\1) }, qr/must be of type SCALAR/);
+}
+
 1;

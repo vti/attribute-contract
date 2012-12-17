@@ -9,6 +9,8 @@ our $VERSION = '0.01';
 
 use Scalar::Util qw(refaddr);
 
+use constant NO_ATTRIBUTE_CONTRACT => $ENV{NO_ATTRIBUTE_CONTRACT};
+
 use Attribute::Contract::Modifier::Requires;
 use Attribute::Contract::Modifier::Ensures;
 
@@ -26,6 +28,7 @@ my %symcache;
 my %todo;
 
 sub import {
+    return if NO_ATTRIBUTE_CONTRACT;
 
     my ($package) = caller;
     $todo{$package}++;
@@ -34,6 +37,7 @@ sub import {
 }
 
 sub CHECK {
+    return if NO_ATTRIBUTE_CONTRACT;
 
     foreach my $package (keys %todo) {
         foreach my $key (keys %modifiers) {
@@ -281,6 +285,11 @@ reference. This speeds up the checking and saves some memory.
 
 Errors are as specific as possible. On error you will get a meaningful message
 and a stack trace.
+
+=head2 SWITCHING OFF
+
+You can switch off contract checking by specifying an environment variable
+C<NO_ATTRIBUTE_CONTRACT>.
 
 =head1 DEVELOPMENT
 

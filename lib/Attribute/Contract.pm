@@ -132,6 +132,11 @@ Attribute::Contract - Design by contract via Perl attributes
         return 1;
     }
 
+    Implementaion->do_smth('hi', 'there'); # works
+
+    Implementaion->do_smth();              # croaks!
+    Implementaion->do_smth(sub {});        # croaks!
+
 =head1 DESCRIPTION
 
 L<Attribute::Contract> by using Perl attributes allows you to specify contract
@@ -198,6 +203,8 @@ Types that eat all the elements. Can be specified at the end of the elements
 list for manual unpacking. C<@> stands for arrays and C<%> stands for hashes.
 All the scalar types can be used to specify the types of the elements.
 
+=over
+
 =item * @ARRAY
 
     @SCALAR
@@ -215,6 +222,8 @@ Which could mean something like:
     $object->method(foo => 'bar', 'baz' => \123);
 
 It also checks that the number of elements is even.
+
+=back
 
 =head2 MULTIPLE VALUES
 

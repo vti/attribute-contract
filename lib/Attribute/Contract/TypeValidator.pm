@@ -40,11 +40,11 @@ sub _build {
     my $min_required = grep { !/\?$/ } @types;
     my $max_allowed = scalar @types;
 
-    if (grep { m/^\@/ } @types[0..$#types - 1]) {
+    if (grep { m/^\@/ } @types[0 .. $#types - 1]) {
         Carp::confess('Array can be only the last element');
     }
 
-    if (grep { m/^\%/ } @types[0..$#types - 1]) {
+    if (grep { m/^\%/ } @types[0 .. $#types - 1]) {
         Carp::confess('Hash can be only the last element');
     }
 
@@ -79,13 +79,13 @@ sub _build {
 
         my $pos = 0;
         foreach my $type (@types) {
+            last if $pos >= @_;
+
             if ($type =~ m/^(?:\@|\%)/) {
                 last;
             }
 
             $type =~ s{\?$}{};
-
-            next if $type eq 'ANY';
 
             my $validator = _build_validator($type, '$_[' . $pos . ']');
 
@@ -148,9 +148,10 @@ sub _build_validator {
     my @validator = ();
 
     my @types;
-    while ($type =~ m/(?:\@|\%)?([a-z]+)(?:\((.*?)\))?/gci) {
-        my $name = $1;
-        my $options = $2;
+    while ($type =~ m/(?:\@|\%)?([a-z\*]+)(?:\((.*?)\))?/gci) {
+        my $name        = $1;
+        my $options     = $2;
+        my $is_nullable = ($name =~ s{\*$}{}) ? 1 : 0;
 
         if ($options) {
             $options = [split /\|/, $options];
@@ -158,34 +159,54 @@ sub _build_validator {
 
         push @types,
           {
-            name    => $name,
-            options => $options || []
+            name        => $name,
+            options     => $options || [],
+            is_nullable => $is_nullable
           };
     }
 
     for my $type (@types) {
-        my $name    = $type->{name};
-        my $options = $type->{options};
+        my $name        = $type->{name};
+        my $options     = $type->{options};
+        my $is_nullable = $type->{is_nullable};
 
-        if ($name eq 'VALUE') {
-            push @validator, "!ref($var)";
+        if ($name eq 'ANY') {
+            push @validator, $is_nullable
+              ? '1'
+              : "defined($var)";
+        }
+        elsif ($name eq 'VALUE') {
+            push @validator, $is_nullable
+              ? "(defined($var) ? !ref($var) : 1)"
+              : "defined($var) && !ref($var)";
         }
         elsif ($name eq 'REF') {
-            my $condition = "ref($var) && (!Scalar::Util::blessed($var) || ref($var) eq 'Regexp')";
+            my $condition =
+"ref($var) && (!Scalar::Util::blessed($var) || ref($var) eq 'Regexp')";
 
             if (@$options) {
-                  $condition .= ' && ('
+                $condition .= ' && ('
                   . join(' || ', map { "ref($var) eq '$_'" } @$options) . ')';
+            }
+
+            if ($is_nullable) {
+                $condition = "(defined($var) ? $condition : 1)";
             }
 
             push @validator, $condition;
         }
         elsif ($name eq 'OBJECT') {
             my ($isa) = @$options;
-            push @validator,
+            my $condition =
               $isa
               ? "Scalar::Util::blessed($var) && $var->isa('$isa') && ref($var) ne 'Regexp'"
               : "Scalar::Util::blessed($var) && ref($var) ne 'Regexp'";
+
+            if ($is_nullable) {
+                $condition = "(defined($var) ? $condition : 1)";
+            }
+
+            push @validator, $condition;
         }
         else {
             Carp::confess("Unknown type '$name'");

@@ -58,18 +58,15 @@ sub wrong_number_of_params : Test(5) {
     $self->_run_failed_tests($tests);
 }
 
-sub values : Test(7) {
+sub values : Test(1) {
     my $self = shift;
 
-    my $tests = [
-        'VALUE' => [1],
-        'VALUE' => [undef],
-    ];
+    my $tests = ['VALUE' => [1],];
 
     $self->_run_tests($tests);
 }
 
-sub wrong_values : Test {
+sub wrong_values : Test(1) {
     my $self = shift;
 
     my $tests = ['VALUE' => [\1],];
@@ -206,7 +203,7 @@ sub multiple_arguments : Test(3) {
     $self->_run_tests($tests);
 }
 
-sub optional_arguments : Test(4) {
+sub optional_arguments : Test(6) {
     my $self = shift;
 
     my $tests = [
@@ -214,6 +211,8 @@ sub optional_arguments : Test(4) {
         'VALUE?,VALUE?,VALUE?' => [1],
         'VALUE?,VALUE?,VALUE?' => [1,  2],
         'VALUE?,VALUE?,VALUE?' => [1, 2, 3],
+        'VALUE,@ANY?'          => [1],
+        'VALUE,%ANY?'          => [1],
     ];
 
     $self->_run_tests($tests);
@@ -233,6 +232,38 @@ sub alternatives : Test(7) {
     ];
 
     $self->_run_tests($tests);
+}
+
+sub undefs : Test(7) {
+    my $self = shift;
+
+    my $tests = [
+        'ANY*'         => [undef],
+        'VALUE*'       => [undef],
+        'REF*'         => [undef],
+        'REF*(SCALAR)' => [undef],
+        'OBJECT*'      => [undef],
+        '@VALUE*'      => [undef, undef],
+        '%VALUE*'      => [foo => undef],
+    ];
+
+    $self->_run_tests($tests);
+}
+
+sub wrong_undefs : Test(7) {
+    my $self = shift;
+
+    my $tests = [
+        'ANY'         => [undef],
+        'VALUE'       => [undef],
+        'REF'         => [undef],
+        'REF(SCALAR)' => [undef],
+        'OBJECT'      => [undef],
+        '@VALUE'      => [undef, undef],
+        '%VALUE'      => [foo => undef],
+    ];
+
+    $self->_run_failed_tests($tests);
 }
 
 sub _run_tests {

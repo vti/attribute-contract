@@ -10,180 +10,255 @@ use Test::Fatal;
 
 use Attribute::Contract::TypeValidator;
 
-sub throw_no_params_allowed : Test {
+sub errors : Test(3) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref();
+    my $tests = [
+        'AN'       => [1] => qr/Unknown type 'AN'/,
+        '@ANY,ANY' => [1] => qr/Array can be only the last element/,
+        '%ANY,ANY' => [1] => qr/Hash can be only the last element/,
+    ];
 
-    like(exception { $code_ref->(undef, 1) }, qr/No params allowed/);
+    for (my $i = 0; $i < @$tests; $i += 3) {
+        my $key   = $tests->[$i];
+        my $value = $tests->[$i + 1];
+        my $error = $tests->[$i + 2];
+
+        my $e = exception { $self->_build_code_ref($key)->(undef, @{$value}) };
+        like($e, $error, $key);
+    }
 }
 
-sub not_throw_when_optional_HASH : Test {
+sub number_of_params : Test(6) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('%ANY?');
+    my $tests = [
+        'ANY'     => [1],
+        'ANY,ANY' => [1, 2],
+        '@ANY'    => [1],
+        '@ANY'    => [1, 2],
+        '@ANY'    => [1, 2, 3],
+        '%ANY' => [1, 2],
+    ];
 
-    ok($code_ref->(undef));
+    $self->_run_tests($tests);
 }
 
-sub not_throw_when_optional_HASH_complex : Test {
+sub wrong_number_of_params : Test(5) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, %ANY?');
+    my $tests = [
+        'ANY'     => [],
+        'ANY'     => [1, 2],
+        'ANY,ANY' => [1],
+        'ANY,ANY' => [1, 2, 3],
+        '%ANY'    => [1],
+    ];
 
-    ok($code_ref->(undef, 1));
+    $self->_run_failed_tests($tests);
 }
 
-sub not_throw_when_optional_ARRAY : Test {
+sub values : Test(7) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('@ANY?');
+    my $tests = [
+        'VALUE' => [1],
+        'VALUE' => [undef],
+    ];
 
-    ok($code_ref->(undef));
+    $self->_run_tests($tests);
 }
 
-sub throw_on_too_many : Test {
+sub wrong_values : Test {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR');
+    my $tests = ['VALUE' => [\1],];
 
-    like(exception { $code_ref->(undef, 1, 2) }, qr/\Q2 param(s) passed, max 1 param(s) allowed\E/);
+    $self->_run_failed_tests($tests);
 }
 
-sub throw_on_not_enough : Test {
+sub references : Test(7) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR');
+    my $tests = [
+        'REF'         => [\1],
+        'REF'         => [{}],
+        'REF(SCALAR)' => [\1],
+        'REF(ARRAY)'  => [[]],
+        'REF(HASH)'   => [{}],
+        'REF(CODE)'   => [sub { }],
+        'REF(Regexp)' => [qr/123/],
+    ];
 
-    like(exception { $code_ref->(undef) }, qr/\Q0 param(s) passed, at least 1 param(s) required\E/);
+    $self->_run_tests($tests);
 }
 
-sub not_throw_on_optional : Test {
+sub wrong_references : Test(9) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR,SCALAR?');
+    my $tests = [
+        'REF'         => [undef],
+        'REF'         => [1],
+        'REF(SCALAR)' => [{}],
+        'REF(ARRAY)'  => [\1],
+        'REF(HASH)'   => [[]],
+        'REF(CODE)'   => [{}],
+        'REF(Regexp)' => [sub { }],
+        'REF(HASH)'   => [TypeValidatorTest->new],
+        'REF'         => [TypeValidatorTest->new],
+    ];
 
-    ok(!exception { $code_ref->(undef, 1) });
+    $self->_run_failed_tests($tests);
 }
 
-sub not_throw_on_several_optional : Test {
+sub objects : Test(2) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR,SCALAR?,SCALAR?');
+    my $tests = [
+        'OBJECT'           => [__PACKAGE__->new],
+        'OBJECT(TestBase)' => [__PACKAGE__->new],
+    ];
 
-    ok($code_ref->(undef, 1, 2));
+    $self->_run_tests($tests);
 }
 
-sub throw_on_wrong_type : Test {
+sub wrong_objects : Test(3) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR');
+    {
 
-    like(exception { $code_ref->(undef, \1) }, qr/Argument 0 must be of type SCALAR/);
+        package Foo;
+
+        sub new {
+            my $class = shift;
+            bless {}, $class;
+        }
+    }
+
+    my $tests = [
+        'OBJECT'           => [\1],
+        'OBJECT'           => [qr/123/],
+        'OBJECT(TestBase)' => [Foo->new],
+    ];
+
+    $self->_run_failed_tests($tests);
 }
 
-sub handle_ANY : Test {
+sub arrays : Test(4) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('ANY');
+    my $tests = [
+        '@ANY'         => [1, 2, 3],
+        '@VALUE'       => [1, 2, 3],
+        '@REF(SCALAR)' => [\1],
+        '@REF(ARRAY)' => [[], []],
+    ];
 
-    ok($code_ref->(undef, \1));
+    $self->_run_tests($tests);
 }
 
-sub handle_at_least_required : Test {
+sub wrong_arrays : Test(3) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, @ANY');
+    my $tests = [
+        '@VALUE'       => [1,  \2, 3],
+        '@REF(SCALAR)' => [\1, {}],
+        '@REF(ARRAY)'  => [[], 1],
+    ];
 
-    like(exception {$code_ref->(undef, 1)}, qr/\Q1 param(s) passed, at least 2 param(s) required\E/);
+    $self->_run_failed_tests($tests);
 }
 
-sub handle_ARRAY : Test {
+sub hashes : Test(4) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, @ANY');
+    my $tests = [
+        '%ANY'         => [foo => 'bar'],
+        '%VALUE'       => [foo => 'bar'],
+        '%REF(SCALAR)' => [foo => \1],
+        '%REF(ARRAY)'  => [foo => []],
+    ];
 
-    ok($code_ref->(undef, 1, 'foo', 'bar'));
+    $self->_run_tests($tests);
 }
 
-sub handle_ARRAY_with_subtype : Test {
+sub wrong_hashes : Test(3) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, @SCALAR');
+    my $tests = [
+        '%VALUE'       => [foo => \1],
+        '%REF(SCALAR)' => [foo => 1],
+        '%REF(ARRAY)'  => [foo => sub { }],
+    ];
 
-    ok($code_ref->(undef, 1, 'foo', 'bar'));
+    $self->_run_failed_tests($tests);
 }
 
-sub throw_on_wrong_subtype : Test {
+sub multiple_arguments : Test(3) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, @SCALAR');
+    my $tests = [
+        'ANY,VALUE,REF(SCALAR)' => [{}, 'hi', \1],
+        'ANY,@ANY'              => [{}, 1,    2, 3],
+        'ANY,%ANY' => [{}, foo => 'bar'],
+    ];
 
-    like(exception {$code_ref->(undef, 1, 'foo', 'bar', \1)}, qr/Array argument 3 must be of type SCALAR/);
+    $self->_run_tests($tests);
 }
 
-sub handle_HASH : Test {
+sub optional_arguments : Test(4) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, %ANY');
+    my $tests = [
+        'ANY,VALUE?'           => [{}, 'hi'],
+        'VALUE?,VALUE?,VALUE?' => [1],
+        'VALUE?,VALUE?,VALUE?' => [1,  2],
+        'VALUE?,VALUE?,VALUE?' => [1, 2, 3],
+    ];
 
-    ok($code_ref->(undef, 1, foo => 'bar'));
+    $self->_run_tests($tests);
 }
 
-sub throw_when_odd_parameters : Test {
+sub alternatives : Test(7) {
     my $self = shift;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, %ANY');
+    my $tests = [
+        'VALUE|REF'         => ['hi'],
+        'VALUE|REF'         => [\'hi'],
+        'REF(SCALAR|ARRAY)' => [\'hi'],
+        'REF(SCALAR|ARRAY)' => [[]],
+        '@(VALUE|REF)'      => [[], 1, \1],
+        '@(REF(SCALAR)|REF(ARRAY))'      => [[], \1],
+        '@(REF(SCALAR|ARRAY)|REF(HASH))' => [[], \1, {}],
+    ];
 
-    like(exception {$code_ref->(undef, 1, 'bar')}, qr/\Q2 param(s) passed, at least 3 param(s) required\E/);
+    $self->_run_tests($tests);
 }
 
-sub throw_on_wrong_HASH_subtype : Test {
+sub _run_tests {
     my $self = shift;
+    my ($tests) = @_;
 
-    my $code_ref = $self->_build_code_ref('SCALAR, %SCALAR');
+    for (my $i = 0; $i < @$tests; $i += 2) {
+        my $key   = $tests->[$i];
+        my $value = $tests->[$i + 1];
 
-    like(exception {$code_ref->(undef, 1, foo => 'bar', baz => \1)}, qr/Hash key 'baz' value must be of type SCALAR/);
+        my $e = exception { $self->_build_code_ref($key)->(undef, @{$value}) };
+        ok(!$e, $key) or diag($e);
+    }
 }
 
-sub handle_OBJECT : Test {
+sub _run_failed_tests {
     my $self = shift;
+    my ($tests) = @_;
 
-    my $code_ref = $self->_build_code_ref('OBJECT');
+    for (my $i = 0; $i < @$tests; $i += 2) {
+        my $key   = $tests->[$i];
+        my $value = $tests->[$i + 1];
 
-    ok($code_ref->(undef, TypeValidatorTest->new));
-}
-
-sub handle_OBJECT_ISA : Test {
-    my $self = shift;
-
-    my $code_ref = $self->_build_code_ref('OBJECT(TestBase)');
-
-    ok($code_ref->(undef, TypeValidatorTest->new));
-}
-
-sub handle_ref : Test {
-    my $self = shift;
-
-    my $code_ref = $self->_build_code_ref('HASHREF');
-
-    ok($code_ref->(undef, {}));
-}
-
-sub handle_regexp : Test {
-    my $self = shift;
-
-    my $code_ref = $self->_build_code_ref('REGEXP');
-
-    ok($code_ref->(undef, qr/1/));
-}
-
-sub handle_alternatives : Test {
-    my $self = shift;
-
-    my $code_ref = $self->_build_code_ref('HASHREF|REGEXP');
-
-    ok($code_ref->(undef, qr/1/));
+        my $e = exception { $self->_build_code_ref($key)->(undef, @{$value}) };
+        ok($e, $key);
+    }
 }
 
 sub _build_code_ref {

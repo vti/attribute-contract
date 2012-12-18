@@ -20,7 +20,7 @@ sub build {
 
     $cache{$attributes} ||= do {
         my $code = _build($attributes);
-        eval $code;
+        eval $code or die $@;
     };
 
     return $cache{$attributes};
@@ -32,12 +32,21 @@ sub _build {
     my @types = split /\s*,\s*/, $attributes;
 
     my $package = __PACKAGE__ . md5_hex($attributes);
-    my $code = "package $package;";
+    my $code    = "package $package;";
     $code .= 'sub {my $self = shift;require Scalar::Util;';
-    $code .= '$Carp::Internal{(__PACKAGE__)}++;';
+    $code .= qq/\$Carp::Internal{'$package'}++;/;
+    $code .= q/$Carp::Internal{'Attribute::Contract::TypeValidator'}++;/;
 
     my $min_required = grep { !/\?$/ } @types;
     my $max_allowed = scalar @types;
+
+    if (grep { m/^\@/ } @types[0..$#types - 1]) {
+        Carp::confess('Array can be only the last element');
+    }
+
+    if (grep { m/^\%/ } @types[0..$#types - 1]) {
+        Carp::confess('Hash can be only the last element');
+    }
 
     if ($max_allowed == 0) {
         $code .= qq{Carp::confess("No params allowed") if \@_;};
@@ -78,7 +87,7 @@ sub _build {
 
             next if $type eq 'ANY';
 
-            my $validator = _build_validator($type);
+            my $validator = _build_validator($type, '$_[' . $pos . ']');
 
             $code .= qq{
                 Carp::confess("Argument $pos must be of type $type") unless $validator;
@@ -113,9 +122,6 @@ sub _build {
 
             $subtype =~ s{\?$}{};
 
-            #Carp::confess("invoked with odd number of parameters")
-            #if ($#{$values} - $pos) % 2 != 0;
-
             if ($subtype ne 'ANY') {
                 my $validator = _build_validator($subtype, '$hash{$key}');
 
@@ -139,35 +145,54 @@ sub _build {
 sub _build_validator {
     my ($type, $var) = @_;
 
-    $var ||= '$_[0]';
-
     my @validator = ();
 
-    my @types = split /\|/, $type;
+    my @types;
+    while ($type =~ m/(?:\@|\%)?([a-z]+)(?:\((.*?)\))?/gci) {
+        my $name = $1;
+        my $options = $2;
+
+        if ($options) {
+            $options = [split /\|/, $options];
+        }
+
+        push @types,
+          {
+            name    => $name,
+            options => $options || []
+          };
+    }
 
     for my $type (@types) {
-        if ($type eq 'SCALAR') {
+        my $name    = $type->{name};
+        my $options = $type->{options};
+
+        if ($name eq 'VALUE') {
             push @validator, "!ref($var)";
         }
-        elsif ($type =~ m/^(.*?)REF$/) {
-            push @validator, "ref($var) eq '$1'";
+        elsif ($name eq 'REF') {
+            my $condition = "ref($var) && (!Scalar::Util::blessed($var) || ref($var) eq 'Regexp')";
+
+            if (@$options) {
+                  $condition .= ' && ('
+                  . join(' || ', map { "ref($var) eq '$_'" } @$options) . ')';
+            }
+
+            push @validator, $condition;
         }
-        elsif ($type =~ m/^OBJECT(?:\((.*?)\))?$/) {
-            my $isa = $1;
+        elsif ($name eq 'OBJECT') {
+            my ($isa) = @$options;
             push @validator,
               $isa
-              ? "Scalar::Util::blessed($var) && $var->isa('$isa')"
-              : "Scalar::Util::blessed($var)";
-        }
-        elsif ($type eq 'REGEXP') {
-            push @validator, qq{ref($var) eq 'Regexp'};
+              ? "Scalar::Util::blessed($var) && $var->isa('$isa') && ref($var) ne 'Regexp'"
+              : "Scalar::Util::blessed($var) && ref($var) ne 'Regexp'";
         }
         else {
-            die "Unknown type $type";
+            Carp::confess("Unknown type '$name'");
         }
     }
 
-    return join ' || ', @validator;
+    return join ' || ', map { "($_)" } @validator;
 }
 
 1;

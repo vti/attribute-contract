@@ -9,7 +9,7 @@ Attribute::Contract - Design by contract via Perl attributes
     package Interface;
     use AttributeContract;
 
-    sub do_smth :ContractRequires(SCALAR, @ANY?) :ContractEnsures(SCALAR) {
+    sub do_smth :ContractRequires(VALUE, @ANY?) :ContractEnsures(VALUE) {
         ...;
     }
 
@@ -41,7 +41,7 @@ whether your implementation follows the same interface and respects the Liskov
 substitution principle.
 
 This module does not check the actual types like C<Str>, C<Int> etc, but the
-Perl data types like C<SCALAR>, C<ARRAY>, references and so on. When the type
+Perl data types like scalars, arrays, hashes, references and so on. When the type
 does not match a L<Carp>'s C<confess> function will be called with detailed
 information like:
 
@@ -59,23 +59,27 @@ Why attributes? They feel and look natural and are applied during compile time.
 
 Any scalar value is accepted.
 
-=item * SCALAR
+=item * VALUE
 
 Anything but not a reference.
 
-=item * SCALARREF
+=item * REF
+
+A non blessed reference to anything.
+
+=item * REF(SCALAR)
 
 A reference to scalar.
 
-=item * ARRAYREF
+=item * REF(ARRAY)
 
 A reference to array.
 
-=item * HASHREF
+=item * REF(HASH)
 
 A reference to hash.
 
-=item * REGEXP
+=item * REF(Regexp)
 
 A reference to regular expression.
 
@@ -99,7 +103,7 @@ All the scalar types can be used to specify the types of the elements.
 
 =item * @ARRAY
 
-    @SCALAR
+    @VALUE
 
 Which could mean something like:
 
@@ -121,7 +125,7 @@ It also checks that the number of elements is even.
 
 Use C<,> when specifying several arguments.
 
-    SCALAR,ANY,CODEREF,@SCALAR
+    VALUE,ANY,REF(CODE),@VALUE
 
 Which could mean something like:
 
@@ -131,7 +135,7 @@ Which could mean something like:
 
 Use C<|> when specifying an alternative type.
 
-    SCALAR|SCALARREF
+    VALUE|REF(VALUE)
 
 Which could mean something like:
 
@@ -141,11 +145,17 @@ or
 
     $object->method(\$foo);
 
+Alternatives can be really deep, like this one:
+
+    @(REF(HASH|CODE)|VALUE)
+
+Which is an array of references to hash or code or simple value.
+
 =head2 OPTIONAL VALUES
 
 Use C<?> when specifying an optional value.
 
-    SCALAR,SCALAR?
+    VALUE,VALUE?
 
 Which could mean something like:
 

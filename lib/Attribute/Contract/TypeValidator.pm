@@ -20,7 +20,7 @@ sub build {
 
     $cache{$attributes} ||= do {
         my $code = _build($attributes);
-        eval $code or die $@;
+        eval $code or Carp::croak("Cannot compile contract: $@");
     };
 
     return $cache{$attributes};
@@ -89,6 +89,7 @@ sub _build {
 
             my $validator = _build_validator($type, '$_[' . $pos . ']');
 
+            $type = quotemeta $type;
             $code .= qq{
                 Carp::confess("Argument $pos must be of type $type") unless $validator;
             };
@@ -176,13 +177,44 @@ sub _build_validator {
               : "defined($var)";
         }
         elsif ($name eq 'VALUE') {
+            my $type_check = '';
+
+            my @type_check;
+            foreach my $option (@$options) {
+                if ($option eq 'Str') {
+                    next;
+                }
+                elsif ($option eq 'Int') {
+                    push @type_check,
+                        "Scalar::Util::looks_like_number($var) &&"
+                      . " $var "
+                      . '=~ m/^[+-]?\d+\z/';
+                }
+                elsif ($option eq 'Float') {
+                    push @type_check,
+                        "Scalar::Util::looks_like_number($var) &&"
+                      . " $var "
+                      . '=~ m/^[+-]?(?=\.?\d)\d*\.?\d*(?:e[+-]?\d+)?\z/i';
+                }
+                elsif ($option =~ m{^/(.*)/$}) {
+                    my $re = qr/$1/;
+                    push @type_check, "$var =~ m/$re/"
+                }
+                else {
+                    Carp::croak("Unknown type '$option'");
+                }
+            }
+
+            $type_check = ' && ' . join(' || ', map { "($_)" } @type_check)
+              if @type_check;
+
             push @validator, $is_nullable
-              ? "(defined($var) ? !ref($var) : 1)"
-              : "defined($var) && !ref($var)";
+              ? "(defined($var) ? (!ref($var)$type_check) : 1)"
+              : "defined($var) && (!ref($var)$type_check)";
         }
         elsif ($name eq 'REF') {
-            my $condition =
-"ref($var) && (!Scalar::Util::blessed($var) || ref($var) eq 'Regexp')";
+            my $condition = "ref($var) &&"
+              . " (!Scalar::Util::blessed($var) || ref($var) eq 'Regexp')";
 
             if (@$options) {
                 $condition .= ' && ('

@@ -58,18 +58,32 @@ sub wrong_number_of_params : Test(5) {
     $self->_run_failed_tests($tests);
 }
 
-sub values : Test(1) {
+sub values : Test(8) {
     my $self = shift;
 
-    my $tests = ['VALUE' => [1],];
+    my $tests = [
+        'VALUE'        => [1],
+        'VALUE(Int)'   => [1],
+        'VALUE(Int)'   => [-1],
+        'VALUE(Int)'   => [+1],
+        'VALUE(Str)'   => ['hi'],
+        'VALUE(Float)' => [1.2],
+        'VALUE(Float)' => [1.2e1],
+        'VALUE(/^\d+$/)' => [0123],
+    ];
 
     $self->_run_tests($tests);
 }
 
-sub wrong_values : Test(1) {
+sub wrong_values : Test(4) {
     my $self = shift;
 
-    my $tests = ['VALUE' => [\1],];
+    my $tests = [
+        'VALUE'        => [\1],
+        'VALUE(Int)'   => [1.2],
+        'VALUE(Float)' => ['what?'],
+        'VALUE(/^\d+$/)' => ['012a3'],
+    ];
 
     $self->_run_failed_tests($tests);
 }

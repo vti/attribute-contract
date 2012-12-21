@@ -74,6 +74,29 @@ sub MODIFY_CODE_ATTRIBUTES {
     $attrs{refaddr $code_ref } = \@attr;
     $modifiers{"$package\::$name"} = \@attr;
 
+    if (@attr) {
+        no strict;
+        my @isa = @{"$package\::ISA"};
+        use strict;
+        foreach my $isa (@isa) {
+            my $key = "$isa\::$name";
+            if (exists $modifiers{$key}) {
+
+                my $base_contract = $modifiers{$key};
+                my $contract = $modifiers{"$package\::$name"};
+
+                if (@$base_contract == @$contract) {
+                    next
+                      if join(',', sort @$base_contract) eq
+                          join(',', sort @$contract);
+                }
+
+                Carp::croak(qq{Changing contract of method '$name'}
+                      . qq{ in $package is not allowed});
+            }
+        }
+    }
+
     no warnings 'redefine';
     foreach my $attr (@attr) {
         next unless $attr =~ m/^Contract([^\(]+)(?:\((.*?)\))?/;

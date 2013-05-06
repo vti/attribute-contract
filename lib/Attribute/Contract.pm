@@ -3,6 +3,7 @@ package Attribute::Contract;
 use strict;
 use warnings;
 
+use 5.012;
 use attributes;
 
 our $VERSION = '0.02';
@@ -26,6 +27,7 @@ my %attrs;
 my %modifiers;
 my %symcache;
 my %todo;
+my %import;
 
 sub import {
     return if NO_ATTRIBUTE_CONTRACT;
@@ -33,7 +35,10 @@ sub import {
     my ($package) = caller;
     $todo{$package}++;
 
-    __PACKAGE__->export_to_level(1, @_);
+    shift;
+    %import = @_;
+
+    __PACKAGE__->export_to_level(1);
 }
 
 sub CHECK {
@@ -71,6 +76,9 @@ sub MODIFY_CODE_ATTRIBUTES {
     my $sym = findsym($package, $code_ref);
     my $name = *{$sym}{NAME};
 
+    return if exists $attrs{refaddr $code_ref };
+    return if exists $modifiers{"$package\::$name"};
+
     $attrs{refaddr $code_ref } = \@attr;
     $modifiers{"$package\::$name"} = \@attr;
 
@@ -106,7 +114,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
         my $class = __PACKAGE__ . '::Modifier::' . $check;
 
-        *{$sym} = $class->modify($package, $name, $code_ref, $arguments);
+        *{$sym} = $class->modify($package, $name, $code_ref, \%import, $arguments);
     }
 
     return ();

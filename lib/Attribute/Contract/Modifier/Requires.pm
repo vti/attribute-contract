@@ -4,21 +4,16 @@ use strict;
 use warnings;
 
 require Carp;
-
-use Attribute::Contract::TypeValidator;
-
-my %cache = ();
+use Attribute::Contract::Utils;
 
 sub modify {
     my $class = shift;
-    my ($package, $name, $code_ref, $attributes) = @_;
+    my ($package, $name, $code_ref, $import, $attributes) = @_;
 
-    my $sub_ref = build($attributes);
+    my $check = build_check(@_);
 
     sub {
-        $sub_ref->(@_);
-
-        $code_ref->(@_);
+        $code_ref->($check->(@_));
     };
 }
 

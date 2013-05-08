@@ -12,12 +12,13 @@ sub build_check {
 
     $attributes = '' unless defined $attributes;
 
-    my $prefix = 'use Type::Params compile => {confess => 1};';
+    my $prefix = '';
+    $prefix .= 'use Type::Params compile => {confess => 1};';
     foreach my $key (keys %$import) {
         if ($key eq '-types') {
             my @types =
               ref $import->{$key} ? @{$import->{$key}} : ($import->{$key});
-            $prefix .= "use Types::Standard qw(@types)";
+            $prefix .= "use Types::Standard qw(@types);";
         }
         elsif ($key eq '-library') {
             my $lib = $import->{$key};

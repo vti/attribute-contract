@@ -6,11 +6,11 @@ use warnings;
 use 5.012;
 use attributes;
 
-our $VERSION = '0.02';
-
-use Scalar::Util qw(refaddr);
+our $VERSION = '0.03';
 
 use constant NO_ATTRIBUTE_CONTRACT => $ENV{NO_ATTRIBUTE_CONTRACT};
+
+use Scalar::Util qw(refaddr);
 
 use Attribute::Contract::Modifier::Requires;
 use Attribute::Contract::Modifier::Ensures;
@@ -150,10 +150,13 @@ Attribute::Contract - Design by contract via Perl attributes
 =head1 SYNOPSIS
 
     package Interface;
-    use AttributeContract;
+    use AttributeContract -types => [qw/Str slurpy ArrayRef/];
 
-    sub do_smth :ContractRequires(VALUE, @ANY?) :ContractEnsures(VALUE) {
-        ...;
+    sub do_smth :ContractRequires(Str, slurpy ArrayRef[Str]) :ContractEnsures(Str) {
+        my $self = shift;
+        my ($input_string, $array_ref_of_strings) = @_;
+
+        return '...';
     }
 
     package Implementation;
@@ -162,9 +165,9 @@ Attribute::Contract - Design by contract via Perl attributes
 
     sub do_smth {
         my $self = shift;
-        my ($foo, @rest) = @_;
+        my ($input_string, $array_ref_of_strings) = @_;
 
-        return 1;
+        return 'ok';
     }
 
     Implementaion->do_smth('hi', 'there'); # works
@@ -183,138 +186,59 @@ It's the most useful for interfaces or abstract classes when you want to control
 whether your implementation follows the same interface and respects the Liskov
 substitution principle.
 
-This module does not check the actual types like C<Str>, C<Int> etc, but the
-Perl data types like scalars, arrays, hashes, references and so on. When the type
-does not match a L<Carp>'s C<confess> function will be called with detailed
-information like:
-
-    0 param(s) passed, at least 1 param(s) is required
+This module uses L<Type::Tiny> underneath so all the checks is done via that
+module. Check it out for more documention on type validation.
 
 Why attributes? They feel and look natural and are applied during compile time.
 
-=head2 TYPES
+=head2 IMPORTING
 
-=head3 Scalar types
+When using L<Attribute::Contract> one may want to import various types in order
+to check them in attributes. Types themselves are not imported into the current
+module but rather used when compiling attributes.
 
-=over
+=head3 Types
 
-=item * ANY
+    package MyClass;
+    use Attribute::Contract -types => [qw/ClassName Str/];
 
-Any scalar value is accepted.
+    sub static_method : ContractRequires(ClassName, Str) {
+    };
 
-=item * VALUE
+    ...
 
-Anything but not a reference.
+    MyClass->static_method('string');
 
-=item * REF
+=head3 Type libraries
 
-A non blessed reference to anything.
+When types are complex or the description is too long attributes might get not
+very readable. In this case one can use type libraries (implemented again via
+L<Type::Tiny>):
 
-=item * REF(SCALAR)
+    package MyTypes;
+    use Type::Library -base, -declare => qw(MyInt);
+    use Type::Utils;
+    use Types::Standard qw(Int);
 
-A reference to scalar.
+    declare MyInt, as Int, where => {$_ > 0};
 
-=item * REF(ARRAY)
+    package MyClass;
+    use Attribute::Contract -library => 'MyTypes';
 
-A reference to array.
+    sub static_method : ContractRequires(ClassName, MyInt) {
+    };
 
-=item * REF(HASH)
+    ...
 
-A reference to hash.
-
-=item * REF(Regexp)
-
-A reference to regular expression.
-
-=item * OBJECT
-
-A blessed reference.
-
-=item * OBJECT(ISA)
-
-A blessed reference with specified isa.
-
-=back
-
-=head3 Greedy types
-
-Types that eat all the elements. Can be specified at the end of the elements
-list for manual unpacking. C<@> stands for arrays and C<%> stands for hashes.
-All the scalar types can be used to specify the types of the elements.
-
-=over
-
-=item * @ARRAY
-
-    @VALUE
-
-Which could mean something like:
-
-    $object->method(1, 2, 3, 4);
-
-=item * %HASH
-
-    %ANY
-
-Which could mean something like:
-
-    $object->method(foo => 'bar', 'baz' => \123);
-
-It also checks that the number of elements is even.
-
-=back
-
-=head2 MULTIPLE VALUES
-
-Use C<,> when specifying several arguments.
-
-    VALUE,ANY,REF(CODE),@VALUE
-
-Which could mean something like:
-
-    $object->method($foo, \@array, sub { ... }, 1, 2, 3);
-
-=head2 ALTERNATIVES
-
-Use C<|> when specifying an alternative type.
-
-    VALUE|REF(VALUE)
-
-Which could mean something like:
-
-    $object->method($foo);
-
-or
-
-    $object->method(\$foo);
-
-Alternatives can be really deep, like this one:
-
-    @(REF(HASH|CODE)|VALUE)
-
-Which is an array of references to hash or code or simple value.
-
-=head2 OPTIONAL VALUES
-
-Use C<?> when specifying an optional value.
-
-    VALUE,VALUE?
-
-Which could mean something like:
-
-    $object->method('foo');
-
-or
-
-    $object->method('foo', 'bar');
+    MyClass->static_method(5);
 
 =head2 IMPLEMENTATION
 
 =head3 Inheritance
 
 By default all the contracts are inherited. Just don't forget to C<use>
-L<Attribute::Contract> in the derived class. But if no methods are override then
-even C<using> this module is not needed.
+L<Attribute::Contract> in the derived class. But if no methods are overriden
+then even C<using> this module is not needed.
 
 =head3 Caching
 
@@ -344,7 +268,7 @@ Viacheslav Tykhanovskyi, C<vti@cpan.org>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2012, Viacheslav Tykhanovskyi
+Copyright (C) 2012-2013, Viacheslav Tykhanovskyi
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

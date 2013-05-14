@@ -23,11 +23,34 @@ BEGIN {
     @EXPORT = qw(&MODIFY_CODE_ATTRIBUTES &FETCH_CODE_ATTRIBUTES);
 }
 
+our $CONTRACT_REQUIRES_ATTR_ALIAS = 'ContractRequires';
+our $CONTRACT_ENSURES_ATTR_ALIAS  = 'ContractEnsures';
+
 my %attrs;
 my %modifiers;
 my %symcache;
 my %todo;
 my %import;
+
+sub contract_requires_name {
+    $import{-names}->{requires} || $CONTRACT_REQUIRES_ATTR_ALIAS;
+}
+
+sub contract_ensures_name {
+    $import{-names}->{ensures} || $CONTRACT_ENSURES_ATTR_ALIAS;
+}
+
+sub contract_attr_re {
+    my $requires_name = contract_requires_name();
+    my $ensures_name = contract_ensures_name();
+
+    return qr/
+        ^
+        ($requires_name|$ensures_name)
+        (?:\((.*?)\))?
+        $
+    /x;
+}
 
 sub import {
     return if NO_ATTRIBUTE_CONTRACT;
@@ -54,7 +77,7 @@ sub CHECK {
             my $attrs = $modifiers{$key};
 
             foreach my $attr (@$attrs) {
-                next unless $attr =~ m/^Contract/;
+                next unless $attr =~ contract_attr_re();
 
                 attributes::->import($package, $code_ref, $attr);
             }
@@ -107,12 +130,14 @@ sub MODIFY_CODE_ATTRIBUTES {
 
     no warnings 'redefine';
     foreach my $attr (@attr) {
-        next unless $attr =~ m/^Contract([^\(]+)(?:\((.*?)\))?/;
+        next unless $attr =~ contract_attr_re();
 
-        my $check     = $1;
+        my $type      = $1;
         my $arguments = $2;
 
-        my $class = __PACKAGE__ . '::Modifier::' . $check;
+        my $modifier = $type eq contract_requires_name() ? 'Requires' : 'Ensures';
+
+        my $class = __PACKAGE__ . '::Modifier::' . $modifier;
 
         *{$sym} = $class->modify($package, $name, $code_ref, \%import, $arguments);
     }
@@ -226,11 +251,21 @@ L<Type::Tiny>):
     use Attribute::Contract -library => 'MyTypes';
 
     sub static_method : ContractRequires(ClassName, MyInt) {
-    };
+    }
 
     ...
 
     MyClass->static_method(5);
+
+=head3 Aliasing
+
+If you don't like C<ContractRequires> and C<ContractEnsures> you can set your
+own names:
+
+    use Attribute::Contract -names => {requires => 'In', ensures => 'Out'}
+
+    sub method : In(ClassName, Str) Out(Str) {
+    }
 
 =head2 IMPLEMENTATION
 

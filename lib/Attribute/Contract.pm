@@ -175,7 +175,7 @@ Attribute::Contract - Design by contract via Perl attributes
 =head1 SYNOPSIS
 
     package Interface;
-    use AttributeContract -types => [qw/Str slurpy ArrayRef/];
+    use Attribute::Contract -types => [qw/Str slurpy ArrayRef/];
 
     sub do_smth :ContractRequires(Str, slurpy ArrayRef[Str]) :ContractEnsures(Str) {
         my $self = shift;
@@ -186,7 +186,7 @@ Attribute::Contract - Design by contract via Perl attributes
 
     package Implementation;
     use base 'Interface';
-    use AttributeContract;
+    use Attribute::Contract;
 
     sub do_smth {
         my $self = shift;

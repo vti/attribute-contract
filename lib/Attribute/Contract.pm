@@ -195,10 +195,10 @@ Attribute::Contract - Design by contract via Perl attributes
         return 'ok';
     }
 
-    Implementaion->do_smth('hi', 'there'); # works
+    Implementation->do_smth('hi', 'there'); # works
 
-    Implementaion->do_smth();              # croaks!
-    Implementaion->do_smth(sub {});        # croaks!
+    Implementation->do_smth();              # croaks!
+    Implementation->do_smth(sub {});        # croaks!
 
 =head1 DESCRIPTION
 

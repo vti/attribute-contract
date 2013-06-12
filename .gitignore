@@ -2,3 +2,6 @@ local/
 blib/
 cover_db/
 pm_to_blib
+*.tar.gz
+Build.PL
+META.json

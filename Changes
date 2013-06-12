@@ -1,6 +1,6 @@
 Revision history for perl module Attribute::Contract
 
-0.03 2013-06-12
+{{$NEXT}}
 
  - Use cpanfile
  - Use Type::Tiny

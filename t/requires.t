@@ -22,7 +22,7 @@ subtest 'constructor' => sub {
 
 subtest 'invalid constructor' => sub {
     like exception { MyClass->new('foo' => 'haha') },
-      qr/does not meet type constraint "Dict\[foo=>Int\]"/;
+      qr/constraint "Dict\[foo=>Int\]"/;
 };
 
 subtest 'correct basic params' => sub {
@@ -30,7 +30,7 @@ subtest 'correct basic params' => sub {
 };
 
 subtest 'invalid basic params' => sub {
-    like exception { MyClass->method([]) }, qr/does not meet type constraint "Str"/;
+    like exception { MyClass->method([]) }, qr/type constraint "Str"/;
 };
 
 done_testing;

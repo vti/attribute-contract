@@ -28,7 +28,7 @@ subtest 'correct return value' => sub {
 
 subtest 'invalid return value' => sub {
     like exception { MyClassInvalid->method() },
-      qr/does not meet type constraint "Str"/;
+      qr/\[\] did not pass type constraint "Str"/;
 };
 
 done_testing;

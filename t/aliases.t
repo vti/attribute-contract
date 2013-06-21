@@ -18,12 +18,12 @@ package main;
 
 subtest 'work with requires aliases' => sub {
     like exception { MyClass->method([]) },
-      qr/does not meet type constraint "Str"/;
+      qr/constraint "Str"/;
 };
 
 subtest 'work with ensures aliases' => sub {
     like exception { MyClass->method('123') },
-      qr/does not meet type constraint "Str"/;
+      qr/constraint "Str"/;
 };
 
 done_testing;

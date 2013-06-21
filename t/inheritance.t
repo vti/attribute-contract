@@ -24,12 +24,12 @@ package main;
 
 subtest 'inherit contract' => sub {
     like exception { MyChildClass->method([]) },
-      qr/does not meet type constraint "Str"/;
+      qr/\[\] did not pass type constraint "Str"/;
 };
 
 subtest 'inherit contract via overriden methods' => sub {
     like exception { MyChildClassWithOverwrite->method([]) },
-      qr/does not meet type constraint "Str"/;
+      qr/\[\] did not pass type constraint "Str/;
 };
 
 subtest 'not allow contract change' => sub {

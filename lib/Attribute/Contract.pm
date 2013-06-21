@@ -6,7 +6,7 @@ use warnings;
 use 5.012;
 use attributes;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use constant NO_ATTRIBUTE_CONTRACT => $ENV{NO_ATTRIBUTE_CONTRACT};
 
